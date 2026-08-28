@@ -1,5 +1,5 @@
 /*
-* main.c - Showcase application utilizing standardized SDL_GameController configuration layout with GUID printer
+* main.c - Showcase application with clean compiler warnings
 */
 
 #define MYSDL2_IMPLEMENTATION
@@ -12,16 +12,9 @@ int main(int argc, char* argv[]) {
     
     MySDL app;
 
-    if (!mysdl_init(&app, "MySDL2 GameController Configuration Showcase", 800, 600)) {
+    if (!mysdl_init(&app, "MySDL2 Joystick Angle Showcase", 800, 600)) {
         printf("Failed to initialize MySDL2!\n");
         return 1;
-    }
-
-    // Print the connected joystick GUID to help configure gamecontrollerdb.txt properly
-    if (SDL_NumJoysticks() > 0) {
-        char guid_str[33];
-        SDL_JoystickGetGUIDString(SDL_JoystickGetDeviceGUID(0), guid_str, sizeof(guid_str));
-        printf("Connected Joystick GUID: %s\n", guid_str);
     }
 
     int custom_circle_x = 400;
@@ -35,48 +28,6 @@ int main(int argc, char* argv[]) {
     while (mysdl_poll(&app)) {
         if (mysdl_key_down(&app, SDL_SCANCODE_ESCAPE)) {
             break;
-        }
-
-        // Standardized GameController inputs mapped via gamecontrollerdb.txt
-        bool a_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_A);
-        bool b_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_B);
-        bool x_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_X);
-        bool y_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_Y);
-        bool l_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-        bool r_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-        bool select_pressed = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_BACK);
-        bool start_pressed  = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_START);
-
-        if (a_pressed) {
-            printf("A button pressed!\n");
-        }
-
-        if (b_pressed) {
-            printf("B button pressed!\n");
-        }
-
-        if (x_pressed) {
-            printf("X button pressed!\n");
-        }
-
-        if (y_pressed) {
-            printf("Y button pressed!\n");
-        }
-
-        if (r_pressed) {
-            printf("R button pressed!\n");
-        }
-
-        if (l_pressed) {
-            printf("L button pressed!\n");
-        }
-
-        if (select_pressed) {
-            printf("Select button pressed!\n");
-        }
-
-        if (start_pressed) {
-            printf("Start button pressed!\n");
         }
 
         int xDir = mysdl_joystick_get_direction_x(&app, 0, 8000);
@@ -95,14 +46,10 @@ int main(int argc, char* argv[]) {
         if (right) player_x += player_speed;
 
         bool action = mysdl_key_down(&app, SDL_SCANCODE_SPACE) || 
-                      a_pressed ||
-                      b_pressed ||
-                      x_pressed ||
-                      y_pressed ||
-                      r_pressed ||
-                      l_pressed ||
-                      start_pressed || 
-                      select_pressed;
+                      mysdl_joystick_button_down(&app, 0) || 
+                      mysdl_joystick_button_down(&app, 1) || 
+                      mysdl_joystick_button_down(&app, 2) || 
+                      mysdl_joystick_button_down(&app, 3);
 
         int mx, my;
         mysdl_get_mouse_pos(&app, &mx, &my);

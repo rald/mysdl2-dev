@@ -1,5 +1,5 @@
 /*
-* mysdl2.h - Minimalist SDL2 Wrapper with GameController & Joystick Support
+* mysdl2.h - Minimalist SDL2 Wrapper with Joystick Angle & Dead-Zone Support
 */
 
 #ifndef MYSDL2_H
@@ -30,7 +30,6 @@ typedef struct {
     int mouse_x, mouse_y;
     Uint32 mouse_buttons;
     SDL_Joystick* joystick;
-    SDL_GameController* controller;
     Sint16 joy_axes[6];
     Uint8 joy_buttons[32];
     Uint8 joy_hats[4];
@@ -61,9 +60,8 @@ void mysdl_get_mouse_pos(MySDL* app, int* x, int* y);
 float mysdl_joystick_axis(MySDL* app, int axis);
 bool mysdl_joystick_button_down(MySDL* app, int button);
 Uint8 mysdl_joystick_hat(MySDL* app, int hat);
-bool mysdl_controller_button_down(MySDL* app, SDL_GameControllerButton button);
 
-// Advanced Joystick Helpers
+// Advanced Joystick Helpers (Lazy Foo' Style Integration)
 int mysdl_joystick_get_direction_x(MySDL* app, int axis, int dead_zone);
 int mysdl_joystick_get_direction_y(MySDL* app, int axis, int dead_zone);
 double mysdl_joystick_angle(MySDL* app, int axis_x, int axis_y, int dead_zone);
@@ -82,14 +80,6 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height) {
         return false;
     }
     
-    // Load custom configuration database file if it exists
-    int mappings_added = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
-    if (mappings_added > 0) {
-        printf("Loaded %d controller mapping(s) from gamecontrollerdb.txt\n", mappings_added);
-    } else {
-        printf("gamecontrollerdb.txt not found or empty. Using default/fallback system mappings.\n");
-    }
-    
     app->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     if (!app->window) return false;
     
@@ -102,7 +92,6 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height) {
     app->mouse_y = 0;
     app->mouse_buttons = 0;
     app->joystick = NULL;
-    app->controller = NULL;
 
     for (int i = 0; i < 6; i++) app->joy_axes[i] = 0;
     for (int i = 0; i < 32; i++) app->joy_buttons[i] = 0;
@@ -110,21 +99,11 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height) {
 
     SDL_PumpEvents();
 
-    for (int i = 0; i < SDL_NumJoysticks(); i++) {
-        if (SDL_IsGameController(i)) {
-            app->controller = SDL_GameControllerOpen(i);
-            if (app->controller) {
-                app->joystick = SDL_GameControllerGetJoystick(app->controller);
-                printf("Successfully opened GameController 0: %s\n", SDL_GameControllerName(app->controller));
-                break;
-            }
-        }
-    }
-
-    if (!app->joystick && SDL_NumJoysticks() > 0) {
+    int num_joy = SDL_NumJoysticks();
+    if (num_joy > 0) {
         app->joystick = SDL_JoystickOpen(0);
         if (app->joystick) {
-            printf("Successfully opened raw Joystick 0: %s\n", SDL_JoystickName(app->joystick));
+            printf("Successfully opened Joystick 0: %s\n", SDL_JoystickName(app->joystick));
         }
     }
 
@@ -132,8 +111,7 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height) {
 }
 
 void mysdl_quit(MySDL* app) {
-    if (app->controller) SDL_GameControllerClose(app->controller);
-    else if (app->joystick) SDL_JoystickClose(app->joystick);
+    if (app->joystick) SDL_JoystickClose(app->joystick);
     if (app->renderer) SDL_DestroyRenderer(app->renderer);
     if (app->window) SDL_DestroyWindow(app->window);
     SDL_Quit();
@@ -278,11 +256,7 @@ Uint8 mysdl_joystick_hat(MySDL* app, int hat) {
     return app->joy_hats[hat];
 }
 
-bool mysdl_controller_button_down(MySDL* app, SDL_GameControllerButton button) {
-    if (!app->controller) return false;
-    return SDL_GameControllerGetButton(app->controller, button) ? true : false;
-}
-
+// Dead-zone filtered directional helpers adapted from Lazy Foo'
 int mysdl_joystick_get_direction_x(MySDL* app, int axis, int dead_zone) {
     if (!app->joystick || axis < 0 || axis >= 6) return 0;
     Sint16 val = app->joy_axes[axis];

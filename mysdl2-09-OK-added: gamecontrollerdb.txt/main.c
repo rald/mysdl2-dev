@@ -1,5 +1,5 @@
 /*
-* main.c - Showcase application utilizing standardized SDL_GameController configuration layout with GUID printer
+* main.c - Showcase application with Select and Start gamepad button support
 */
 
 #define MYSDL2_IMPLEMENTATION
@@ -12,16 +12,9 @@ int main(int argc, char* argv[]) {
     
     MySDL app;
 
-    if (!mysdl_init(&app, "MySDL2 GameController Configuration Showcase", 800, 600)) {
+    if (!mysdl_init(&app, "MySDL2 Gamepad Select & Start Showcase", 800, 600)) {
         printf("Failed to initialize MySDL2!\n");
         return 1;
-    }
-
-    // Print the connected joystick GUID to help configure gamecontrollerdb.txt properly
-    if (SDL_NumJoysticks() > 0) {
-        char guid_str[33];
-        SDL_JoystickGetGUIDString(SDL_JoystickGetDeviceGUID(0), guid_str, sizeof(guid_str));
-        printf("Connected Joystick GUID: %s\n", guid_str);
     }
 
     int custom_circle_x = 400;
@@ -37,15 +30,15 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        // Standardized GameController inputs mapped via gamecontrollerdb.txt
-        bool a_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_A);
-        bool b_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_B);
-        bool x_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_X);
-        bool y_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_Y);
-        bool l_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-        bool r_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-        bool select_pressed = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_BACK);
-        bool start_pressed  = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_START);
+        // Standardized GameController button lookups
+        bool x_pressed = mysdl_joystick_button_down(&app,  0);
+        bool a_pressed = mysdl_joystick_button_down(&app,  1);
+        bool b_pressed  = mysdl_joystick_button_down(&app, 2);
+        bool y_pressed  = mysdl_joystick_button_down(&app, 3);
+        bool l_pressed = mysdl_joystick_button_down(&app,  4);
+        bool r_pressed  = mysdl_joystick_button_down(&app, 5);
+        bool select_pressed = mysdl_joystick_button_down(&app, 8);
+        bool start_pressed  = mysdl_joystick_button_down(&app, 9);
 
         if (a_pressed) {
             printf("A button pressed!\n");

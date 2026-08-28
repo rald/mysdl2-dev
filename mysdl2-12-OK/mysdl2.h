@@ -82,14 +82,6 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height) {
         return false;
     }
     
-    // Load custom configuration database file if it exists
-    int mappings_added = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
-    if (mappings_added > 0) {
-        printf("Loaded %d controller mapping(s) from gamecontrollerdb.txt\n", mappings_added);
-    } else {
-        printf("gamecontrollerdb.txt not found or empty. Using default/fallback system mappings.\n");
-    }
-    
     app->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     if (!app->window) return false;
     
