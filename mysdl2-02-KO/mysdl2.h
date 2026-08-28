@@ -1,24 +1,16 @@
 /*
-* mysdl2.h - Minimalist SDL2 Wrapper with Joystick Angle & Dead-Zone Support
+* mysdl2.h - Minimalist SDL2 Wrapper (STB-style single-header library)
 */
 
 #ifndef MYSDL2_H
 #define MYSDL2_H
 
-#define _USE_MATH_DEFINES // Ensures M_PI is defined on strict C99 builds
 #include <SDL2/SDL.h>
 #include <stdbool.h>
-#include <math.h>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define MYSDL_DEFAULT_DEAD_ZONE 8000
 
 typedef struct {
     SDL_Window* window;
@@ -61,17 +53,13 @@ float mysdl_joystick_axis(MySDL* app, int axis);
 bool mysdl_joystick_button_down(MySDL* app, int button);
 Uint8 mysdl_joystick_hat(MySDL* app, int hat);
 
-// Advanced Joystick Helpers (Lazy Foo' Style Integration)
-int mysdl_joystick_get_direction_x(MySDL* app, int axis, int dead_zone);
-int mysdl_joystick_get_direction_y(MySDL* app, int axis, int dead_zone);
-double mysdl_joystick_angle(MySDL* app, int axis_x, int axis_y, int dead_zone);
-
 #ifdef __cplusplus
 }
 #endif
 
 #ifdef MYSDL2_IMPLEMENTATION
 
+#include <math.h>
 #include <stdio.h>
 
 bool mysdl_init(MySDL* app, const char* title, int width, int height) {
@@ -97,14 +85,24 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height) {
     for (int i = 0; i < 32; i++) app->joy_buttons[i] = 0;
     for (int i = 0; i < 4; i++) app->joy_hats[i] = 0;
 
+    // Force SDL to communicate with the OS subsystem and populate device lists
     SDL_PumpEvents();
 
     int num_joy = SDL_NumJoysticks();
+    printf("Detected %d joystick device(s) via raw driver.\n", num_joy);
+
     if (num_joy > 0) {
         app->joystick = SDL_JoystickOpen(0);
         if (app->joystick) {
             printf("Successfully opened Joystick 0: %s\n", SDL_JoystickName(app->joystick));
+            printf(" - Axes: %d\n", SDL_JoystickNumAxes(app->joystick));
+            printf(" - Buttons: %d\n", SDL_JoystickNumButtons(app->joystick));
+            printf(" - Hats: %d\n", SDL_JoystickNumHats(app->joystick));
+        } else {
+            printf("Failed to open Joystick 0: %s\n", SDL_GetError());
         }
+    } else {
+        printf("CRITICAL: 0 Joysticks detected. Check USB connection or OS permissions (try running with sudo on Linux).\n");
     }
 
     return true;
@@ -121,6 +119,18 @@ bool mysdl_poll(MySDL* app) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_QUIT) app->is_running = false;
+        
+        if (e.type == SDL_JOYBUTTONDOWN) {
+            printf("Raw Joystick Button Pressed: %d\n", e.jbutton.button);
+        }
+        if (e.type == SDL_JOYAXISMOTION) {
+            if (abs(e.jaxis.value) > 15000) {
+                printf("Raw Joystick Axis %d Moved: %d\n", e.jaxis.axis, e.jaxis.value);
+            }
+        }
+        if (e.type == SDL_JOYHATMOTION) {
+            printf("Raw Joystick Hat Moved: %d\n", e.jhat.value);
+        }
     }
     
     app->mouse_buttons = SDL_GetMouseState(&app->mouse_x, &app->mouse_y);
@@ -254,34 +264,6 @@ bool mysdl_joystick_button_down(MySDL* app, int button) {
 Uint8 mysdl_joystick_hat(MySDL* app, int hat) {
     if (!app->joystick || hat < 0 || hat >= 4) return 0;
     return app->joy_hats[hat];
-}
-
-// Dead-zone filtered directional helpers adapted from Lazy Foo'
-int mysdl_joystick_get_direction_x(MySDL* app, int axis, int dead_zone) {
-    if (!app->joystick || axis < 0 || axis >= 6) return 0;
-    Sint16 val = app->joy_axes[axis];
-    if (val < -dead_zone) return -1;
-    if (val > dead_zone) return 1;
-    return 0;
-}
-
-int mysdl_joystick_get_direction_y(MySDL* app, int axis, int dead_zone) {
-    if (!app->joystick || axis < 0 || axis >= 6) return 0;
-    Sint16 val = app->joy_axes[axis];
-    if (val < -dead_zone) return -1;
-    if (val > dead_zone) return 1;
-    return 0;
-}
-
-double mysdl_joystick_angle(MySDL* app, int axis_x, int axis_y, int dead_zone) {
-    int xDir = mysdl_joystick_get_direction_x(app, axis_x, dead_zone);
-    int yDir = mysdl_joystick_get_direction_y(app, axis_y, dead_zone);
-
-    double angle = atan2((double)yDir, (double)xDir) * (180.0 / M_PI);
-    if (xDir == 0 && yDir == 0) {
-        angle = 0.0;
-    }
-    return angle;
 }
 
 #endif // MYSDL2_IMPLEMENTATION

@@ -1,5 +1,5 @@
 /*
-* main.c - Showcase application with clean compiler warnings
+* main.c - Showcase application with Raw Joystick Fallbacks
 */
 
 #define MYSDL2_IMPLEMENTATION
@@ -7,12 +7,9 @@
 #include <stdio.h>
 
 int main(int argc, char* argv[]) {
-    (void)argc;
-    (void)argv;
-    
     MySDL app;
 
-    if (!mysdl_init(&app, "MySDL2 Joystick Angle Showcase", 800, 600)) {
+    if (!mysdl_init(&app, "MySDL2 Raw Joystick Showcase", 800, 600)) {
         printf("Failed to initialize MySDL2!\n");
         return 1;
     }
@@ -30,21 +27,23 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        int xDir = mysdl_joystick_get_direction_x(&app, 0, 8000);
-        int yDir = mysdl_joystick_get_direction_y(&app, 1, 8000);
-        double joystickAngle = mysdl_joystick_angle(&app, 0, 1, 8000);
-
+        // SNES D-Pad can report as Hats, Axes (Axis 0 / Axis 1), or Buttons depending on clone vendor.
+        // We check all possibilities safely so it responds immediately:
+        float ax0 = mysdl_joystick_axis(&app, 0);
+        float ax1 = mysdl_joystick_axis(&app, 1);
         Uint8 hat  = mysdl_joystick_hat(&app, 0);
-        bool up    = mysdl_key_down(&app, SDL_SCANCODE_W) || mysdl_key_down(&app, SDL_SCANCODE_UP) || yDir < 0 || (hat & SDL_HAT_UP);
-        bool down  = mysdl_key_down(&app, SDL_SCANCODE_S) || mysdl_key_down(&app, SDL_SCANCODE_DOWN) || yDir > 0 || (hat & SDL_HAT_DOWN);
-        bool left  = mysdl_key_down(&app, SDL_SCANCODE_A) || mysdl_key_down(&app, SDL_SCANCODE_LEFT) || xDir < 0 || (hat & SDL_HAT_LEFT);
-        bool right = mysdl_key_down(&app, SDL_SCANCODE_D) || mysdl_key_down(&app, SDL_SCANCODE_RIGHT) || xDir > 0 || (hat & SDL_HAT_RIGHT);
+
+        bool up    = mysdl_key_down(&app, SDL_SCANCODE_W) || mysdl_key_down(&app, SDL_SCANCODE_UP) || ax1 < -0.5f || (hat & SDL_HAT_UP);
+        bool down  = mysdl_key_down(&app, SDL_SCANCODE_S) || mysdl_key_down(&app, SDL_SCANCODE_DOWN) || ax1 > 0.5f || (hat & SDL_HAT_DOWN);
+        bool left  = mysdl_key_down(&app, SDL_SCANCODE_A) || mysdl_key_down(&app, SDL_SCANCODE_LEFT) || ax0 < -0.5f || (hat & SDL_HAT_LEFT);
+        bool right = mysdl_key_down(&app, SDL_SCANCODE_D) || mysdl_key_down(&app, SDL_SCANCODE_RIGHT) || ax0 > 0.5f || (hat & SDL_HAT_RIGHT);
 
         if (up) player_y -= player_speed;
         if (down) player_y += player_speed;
         if (left) player_x -= player_speed;
         if (right) player_x += player_speed;
 
+        // Check face buttons (checking raw buttons 0 through 3 for SNES Y, X, A, B mapping variants)
         bool action = mysdl_key_down(&app, SDL_SCANCODE_SPACE) || 
                       mysdl_joystick_button_down(&app, 0) || 
                       mysdl_joystick_button_down(&app, 1) || 
@@ -77,10 +76,6 @@ int main(int argc, char* argv[]) {
         Uint8 player_b = action ? 0 : 255;
         mysdl_fill_rect(&app, (int)player_x, (int)player_y, 30, 30, player_r, 200, player_b, 255);
         mysdl_draw_rect(&app, (int)player_x, (int)player_y, 30, 30, 255, 255, 255, 255);
-
-        if (xDir != 0 || yDir != 0) {
-            (void)joystickAngle;
-        }
 
         mysdl_present(&app);
     }
