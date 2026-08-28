@@ -39,16 +39,16 @@ typedef struct {
 bool mysdl_init(MySDL* app, const char* title, int width, int height);
 void mysdl_quit(MySDL* app);
 bool mysdl_poll(MySDL* app);
-void mysdl_clear(MySDL* app, Uint32 color);
+void mysdl_clear(MySDL* app, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 void mysdl_present(MySDL* app);
 
-// Graphics Primitives (Using Uint32 color format: 0xRRGGBBAA)
-void mysdl_draw_pixel(MySDL* app, int x, int y, Uint32 color);
-void mysdl_draw_line(MySDL* app, int x0, int y0, int x1, int y1, Uint32 color);
-void mysdl_draw_rect(MySDL* app, int x, int y, int w, int h, Uint32 color);
-void mysdl_fill_rect(MySDL* app, int x, int y, int w, int h, Uint32 color);
-void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint32 color);
-void mysdl_fill_circle(MySDL* app, int cx, int cy, int radius, Uint32 color);
+// Graphics Primitives
+void mysdl_draw_pixel(MySDL* app, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void mysdl_draw_line(MySDL* app, int x0, int y0, int x1, int y1, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void mysdl_draw_rect(MySDL* app, int x, int y, int w, int h, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void mysdl_fill_rect(MySDL* app, int x, int y, int w, int h, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void mysdl_fill_circle(MySDL* app, int cx, int cy, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 
 // Collision Helpers
 bool mysdl_inrect(int x, int y, int rx, int ry, int rw, int rh);
@@ -76,18 +76,13 @@ double mysdl_joystick_angle(MySDL* app, int axis_x, int axis_y, int dead_zone);
 
 #include <stdio.h>
 
-// Color Component Unpacking Macros (Assuming 0xRRGGBBAA layout)
-#define MYSDL_COLOR_R(c) ((Uint8)((c >> 24) & 0xFF))
-#define MYSDL_COLOR_G(c) ((Uint8)((c >> 16) & 0xFF))
-#define MYSDL_COLOR_B(c) ((Uint8)((c >> 8)  & 0xFF))
-#define MYSDL_COLOR_A(c) ((Uint8)((c)       & 0xFF))
-
 bool mysdl_init(MySDL* app, const char* title, int width, int height) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return false;
     }
     
+    // Load custom configuration database file if it exists
     int mappings_added = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
     if (mappings_added > 0) {
         printf("Loaded %d controller mapping(s) from gamecontrollerdb.txt\n", mappings_added);
@@ -168,8 +163,8 @@ bool mysdl_poll(MySDL* app) {
     return app->is_running;
 }
 
-void mysdl_clear(MySDL* app, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_clear(MySDL* app, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     SDL_RenderClear(app->renderer);
 }
 
@@ -177,30 +172,30 @@ void mysdl_present(MySDL* app) {
     SDL_RenderPresent(app->renderer);
 }
 
-void mysdl_draw_pixel(MySDL* app, int x, int y, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_draw_pixel(MySDL* app, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     SDL_RenderDrawPoint(app->renderer, x, y);
 }
 
-void mysdl_draw_line(MySDL* app, int x0, int y0, int x1, int y1, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_draw_line(MySDL* app, int x0, int y0, int x1, int y1, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     SDL_RenderDrawLine(app->renderer, x0, y0, x1, y1);
 }
 
-void mysdl_draw_rect(MySDL* app, int x, int y, int w, int h, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_draw_rect(MySDL* app, int x, int y, int w, int h, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     SDL_Rect rect = {x, y, w, h};
     SDL_RenderDrawRect(app->renderer, &rect);
 }
 
-void mysdl_fill_rect(MySDL* app, int x, int y, int w, int h, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_fill_rect(MySDL* app, int x, int y, int w, int h, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     SDL_Rect rect = {x, y, w, h};
     SDL_RenderFillRect(app->renderer, &rect);
 }
 
-void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     int dx = radius;
     int dy = 0;
     int err = 0;
@@ -224,8 +219,8 @@ void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint32 color) {
     }
 }
 
-void mysdl_fill_circle(MySDL* app, int cx, int cy, int radius, Uint32 color) {
-    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+void mysdl_fill_circle(MySDL* app, int cx, int cy, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_SetRenderDrawColor(app->renderer, r, g, b, a);
     int dx = radius;
     int dy = 0;
     int err = 0;
