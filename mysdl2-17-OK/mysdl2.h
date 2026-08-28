@@ -1,5 +1,5 @@
 /*
-* mysdl2.h - Minimalist SDL2 Wrapper with GameController, Joystick & PixelSize Support
+* mysdl2.h - Minimalist SDL2 Wrapper with GameController & Joystick Support
 */
 
 #ifndef MYSDL2_H
@@ -24,7 +24,6 @@ typedef struct {
     SDL_Window* window;
     SDL_Renderer* renderer;
     bool is_running;
-    int pixel_size;
     
     // Input states
     const Uint8* keyboard_state;
@@ -37,7 +36,7 @@ typedef struct {
     Uint8 joy_hats[4];
 } MySDL;
 
-bool mysdl_init(MySDL* app, const char* title, int width, int height, int pixelSize);
+bool mysdl_init(MySDL* app, const char* title, int width, int height);
 void mysdl_quit(MySDL* app);
 bool mysdl_poll(MySDL* app);
 void mysdl_clear(MySDL* app, Uint32 color);
@@ -45,7 +44,6 @@ void mysdl_present(MySDL* app);
 
 // Graphics Primitives (Using Uint32 color format: 0xRRGGBBAA)
 void mysdl_draw_pixel(MySDL* app, int x, int y, Uint32 color);
-void mysdl_pset(MySDL* app, int x, int y, Uint32 color);
 void mysdl_draw_line(MySDL* app, int x0, int y0, int x1, int y1, Uint32 color);
 void mysdl_draw_rect(MySDL* app, int x, int y, int w, int h, Uint32 color);
 void mysdl_fill_rect(MySDL* app, int x, int y, int w, int h, Uint32 color);
@@ -84,7 +82,7 @@ double mysdl_joystick_angle(MySDL* app, int axis_x, int axis_y, int dead_zone);
 #define MYSDL_COLOR_G(c) ((Uint8)((c >> 8)  & 0xFF))
 #define MYSDL_COLOR_B(c) ((Uint8)((c)       & 0xFF))
 
-bool mysdl_init(MySDL* app, const char* title, int width, int height, int pixelSize) {
+bool mysdl_init(MySDL* app, const char* title, int width, int height) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return false;
@@ -97,8 +95,7 @@ bool mysdl_init(MySDL* app, const char* title, int width, int height, int pixelS
         printf("gamecontrollerdb.txt not found or empty. Using default/fallback system mappings.\n");
     }
     
-    app->pixel_size = (pixelSize > 0) ? pixelSize : 1;
-    app->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width * app->pixel_size, height * app->pixel_size, SDL_WINDOW_SHOWN);
+    app->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     if (!app->window) return false;
     
     app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -153,10 +150,7 @@ bool mysdl_poll(MySDL* app) {
         if (e.type == SDL_QUIT) app->is_running = false;
     }
     
-    int raw_x, raw_y;
-    app->mouse_buttons = SDL_GetMouseState(&raw_x, &raw_y);
-    app->mouse_x = raw_x / app->pixel_size;
-    app->mouse_y = raw_y / app->pixel_size;
+    app->mouse_buttons = SDL_GetMouseState(&app->mouse_x, &app->mouse_y);
     app->keyboard_state = SDL_GetKeyboardState(NULL);
 
     if (app->joystick) {
@@ -185,69 +179,41 @@ void mysdl_present(MySDL* app) {
 
 void mysdl_draw_pixel(MySDL* app, int x, int y, Uint32 color) {
     SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
-    if (app->pixel_size <= 1) {
-        SDL_RenderDrawPoint(app->renderer, x, y);
-    } else {
-        SDL_Rect rect = {x * app->pixel_size, y * app->pixel_size, app->pixel_size, app->pixel_size};
-        SDL_RenderFillRect(app->renderer, &rect);
-    }
-}
-
-void mysdl_pset(MySDL* app, int x, int y, Uint32 color) {
-    mysdl_draw_pixel(app, x, y, color);
+    SDL_RenderDrawPoint(app->renderer, x, y);
 }
 
 void mysdl_draw_line(MySDL* app, int x0, int y0, int x1, int y1, Uint32 color) {
     SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
-    if (app->pixel_size <= 1) {
-        SDL_RenderDrawLine(app->renderer, x0, y0, x1, y1);
-    } else {
-        int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-        int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-        int err = dx + dy, e2;
-        while (1) {
-            mysdl_pset(app, x0, y0, color);
-            if (x0 == x1 && y0 == y1) break;
-            e2 = 2 * err;
-            if (e2 >= dy) { err += dy; x0 += sx; }
-            if (e2 <= dx) { err += dx; y0 += sy; }
-        }
-    }
+    SDL_RenderDrawLine(app->renderer, x0, y0, x1, y1);
 }
 
 void mysdl_draw_rect(MySDL* app, int x, int y, int w, int h, Uint32 color) {
-    for (int i = 0; i < w; i++) {
-        mysdl_pset(app, x + i, y, color);
-        mysdl_pset(app, x + i, y + h - 1, color);
-    }
-    for (int j = 0; j < h; j++) {
-        mysdl_pset(app, x, y + j, color);
-        mysdl_pset(app, x + w - 1, y + j, color);
-    }
+    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+    SDL_Rect rect = {x, y, w, h};
+    SDL_RenderDrawRect(app->renderer, &rect);
 }
 
 void mysdl_fill_rect(MySDL* app, int x, int y, int w, int h, Uint32 color) {
-    for (int j = 0; j < h; j++) {
-        for (int i = 0; i < w; i++) {
-            mysdl_pset(app, x + i, y + j, color);
-        }
-    }
+    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
+    SDL_Rect rect = {x, y, w, h};
+    SDL_RenderFillRect(app->renderer, &rect);
 }
 
 void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint32 color) {
+    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
     int dx = radius;
     int dy = 0;
     int err = 0;
 
     while (dx >= dy) {
-        mysdl_pset(app, cx + dx, cy + dy, color);
-        mysdl_pset(app, cx - dx, cy + dy, color);
-        mysdl_pset(app, cx + dx, cy - dy, color);
-        mysdl_pset(app, cx - dx, cy - dy, color);
-        mysdl_pset(app, cx + dy, cy + dx, color);
-        mysdl_pset(app, cx - dy, cy + dx, color);
-        mysdl_pset(app, cx + dy, cy - dx, color);
-        mysdl_pset(app, cx - dy, cy - dx, color);
+        SDL_RenderDrawPoint(app->renderer, cx + dx, cy + dy);
+        SDL_RenderDrawPoint(app->renderer, cx - dx, cy + dy);
+        SDL_RenderDrawPoint(app->renderer, cx + dx, cy - dy);
+        SDL_RenderDrawPoint(app->renderer, cx - dx, cy - dy);
+        SDL_RenderDrawPoint(app->renderer, cx + dy, cy + dx);
+        SDL_RenderDrawPoint(app->renderer, cx - dy, cy + dx);
+        SDL_RenderDrawPoint(app->renderer, cx + dy, cy - dx);
+        SDL_RenderDrawPoint(app->renderer, cx - dy, cy - dx);
 
         dy += 1;
         err += 1 + 2 * dy;
@@ -259,19 +225,16 @@ void mysdl_draw_circle(MySDL* app, int cx, int cy, int radius, Uint32 color) {
 }
 
 void mysdl_fill_circle(MySDL* app, int cx, int cy, int radius, Uint32 color) {
+    SDL_SetRenderDrawColor(app->renderer, MYSDL_COLOR_R(color), MYSDL_COLOR_G(color), MYSDL_COLOR_B(color), MYSDL_COLOR_A(color));
     int dx = radius;
     int dy = 0;
     int err = 0;
 
     while (dx >= dy) {
-        for (int px = cx - dx; px <= cx + dx; px++) {
-            mysdl_pset(app, px, cy + dy, color);
-            mysdl_pset(app, px, cy - dy, color);
-        }
-        for (int px = cx - dy; px <= cx + dy; px++) {
-            mysdl_pset(app, px, cy + dx, color);
-            mysdl_pset(app, px, cy - dx, color);
-        }
+        SDL_RenderDrawLine(app->renderer, cx - dx, cy + dy, cx + dx, cy + dy);
+        SDL_RenderDrawLine(app->renderer, cx - dx, cy - dy, cx + dx, cy - dy);
+        SDL_RenderDrawLine(app->renderer, cx - dy, cy + dx, cx + dy, cy + dx);
+        SDL_RenderDrawLine(app->renderer, cx - dy, cy - dx, cx + dy, cy - dx);
 
         dy += 1;
         err += 1 + 2 * dy;

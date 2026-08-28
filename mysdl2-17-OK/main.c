@@ -8,34 +8,23 @@
 
 // Sweetie-16 Color Palette (GrafxKid) - Updated for 0xAABBGGRR layout
 const uint32_t SWEETIE_16_PALETTE[16] = {
-    0xFF2C1C1A, // [0x00] Dark Chocolate Licorice (Swapped R and B)[cite: 2]
-    0xFF5D275D, // [0x01] Blackberry Truffle[cite: 2]
-    0xFF533EB1, // [0x02] Cherry Drop[cite: 2]
-    0xFF577DEF, // [0x03] Spiced Peach[cite: 2]
-    0xFF75CDFF, // [0x04] Butterscotch Crunch[cite: 2]
-    0xFF70F0A7, // [0x05] Key Lime Jelly[cite: 2]
-    0xFF64B738, // [0x06] Spearmint Leaf[cite: 2]
-    0xFF797125, // [0x07] Blue Raspberry Frost[cite: 2]
-    0xFF6F3629, // [0x08] Blueberry Hard Candy[cite: 2]
-    0xFFC95D3B, // [0x09] Bubblegum Glaze[cite: 2]
-    0xFFF6A641, // [0x0A] Cotton Candy Sky[cite: 2]
-    0xFFF7EF73, // [0x0B] Iced Lemonade Fizz[cite: 2]
-    0xFFF4F4F4, // [0x0C] Powdered Sugar[cite: 2]
-    0xFFC2B094, // [0x0D] Frosting Mist[cite: 2]
-    0xFF866C56, // [0x0E] Cool Mint Swirl[cite: 2]
-    0xFF573C33  // [0x0F] Cocoa Twilight[cite: 2]
+    0xFF2C1C1A, // [0x00] Dark Chocolate Licorice (Swapped R and B)
+    0xFF5D275D, // [0x01] Blackberry Truffle
+    0xFF533EB1, // [0x02] Cherry Drop
+    0xFF577DEF, // [0x03] Spiced Peach
+    0xFF75CDFF, // [0x04] Butterscotch Crunch
+    0xFF70F0A7, // [0x05] Key Lime Jelly
+    0xFF64B738, // [0x06] Spearmint Leaf
+    0xFF797125, // [0x07] Blue Raspberry Frost
+    0xFF6F3629, // [0x08] Blueberry Hard Candy
+    0xFFC95D3B, // [0x09] Bubblegum Glaze
+    0xFFF6A641, // [0x0A] Cotton Candy Sky
+    0xFFF7EF73, // [0x0B] Iced Lemonade Fizz
+    0xFFF4F4F4, // [0x0C] Powdered Sugar
+    0xFFC2B094, // [0x0D] Frosting Mist
+    0xFF866C56, // [0x0E] Cool Mint Swirl
+    0xFF573C33  // [0x0F] Cocoa Twilight
 };
-
-// Math Helpers
-static inline float clamp(float val, float min, float max) {
-    if (val < min) return min;
-    if (val > max) return max;
-    return val;
-}
-
-static inline float lerp(float a, float b, float t) {
-    return a + t * (b - a);
-}
 
 int main(int argc, char* argv[]) {
     (void)argc;
@@ -43,7 +32,7 @@ int main(int argc, char* argv[]) {
     
     MySDL app;
 
-    if (!mysdl_init(&app, "MySDL2 GameController Configuration Showcase", 400, 300, 2)) {
+    if (!mysdl_init(&app, "MySDL2 GameController Configuration Showcase", 800, 600)) {
         printf("Failed to initialize MySDL2!\n");
         return 1;
     }
@@ -54,13 +43,13 @@ int main(int argc, char* argv[]) {
         printf("Connected Joystick GUID: %s\n", guid_str);
     }
 
-    int custom_circle_x = 200;
-    int custom_circle_y = 150;
-    int custom_circle_r = 20;
+    int custom_circle_x = 400;
+    int custom_circle_y = 300;
+    int custom_circle_r = 40;
 
-    float player_x = 200.0f;
-    float player_y = 225.0f;
-    float player_speed = 2.0f;
+    float player_x = 400.0f;
+    float player_y = 450.0f;
+    float player_speed = 4.0f;
 
     while (mysdl_poll(&app)) {
         if (mysdl_key_down(&app, SDL_SCANCODE_ESCAPE)) {
@@ -75,6 +64,15 @@ int main(int argc, char* argv[]) {
         bool r_pressed      = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
         bool select_pressed = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_BACK);
         bool start_pressed  = mysdl_controller_button_down(&app, SDL_CONTROLLER_BUTTON_START);
+
+        if (a_pressed) printf("A button pressed!\n");
+        if (b_pressed) printf("B button pressed!\n");
+        if (x_pressed) printf("X button pressed!\n");
+        if (y_pressed) printf("Y button pressed!\n");
+        if (r_pressed) printf("R button pressed!\n");
+        if (l_pressed) printf("L button pressed!\n");
+        if (select_pressed) printf("Select button pressed!\n");
+        if (start_pressed) printf("Start button pressed!\n");
 
         int xDir = mysdl_joystick_get_direction_x(&app, 0, 8000);
         int yDir = mysdl_joystick_get_direction_y(&app, 1, 8000);
@@ -91,10 +89,6 @@ int main(int argc, char* argv[]) {
         if (left) player_x -= player_speed;
         if (right) player_x += player_speed;
 
-        // Clamp player position to stay inside the 400x300 logical boundaries
-        player_x = clamp(player_x, 0.0f, 400.0f - 15.0f);
-        player_y = clamp(player_y, 0.0f, 300.0f - 15.0f);
-
         bool action = mysdl_key_down(&app, SDL_SCANCODE_SPACE) || 
                       a_pressed || b_pressed || x_pressed || y_pressed ||
                       r_pressed || l_pressed || start_pressed || select_pressed;
@@ -103,28 +97,31 @@ int main(int argc, char* argv[]) {
         mysdl_get_mouse_pos(&app, &mx, &my);
         bool mouse_clicked = mysdl_mouse_button_down(&app, SDL_BUTTON_LEFT);
 
-        bool hovering_rect = mysdl_inrect(mx, my, 50, 50, 100, 50);
+        bool hovering_rect = mysdl_inrect(mx, my, 100, 100, 200, 100);
         bool hovering_circle = mysdl_incircle(mx, my, custom_circle_x, custom_circle_y, custom_circle_r);
 
         mysdl_clear(&app, SWEETIE_16_PALETTE[0x00]);
 
-        for (int x = 0; x < 400; x += 25) mysdl_draw_line(&app, x, 0, x, 300,  SWEETIE_16_PALETTE[0x01]);
-        for (int y = 0; y < 300; y += 25) mysdl_draw_line(&app, 0, y, 400, y,  SWEETIE_16_PALETTE[0x01]);
+        for (int x = 0; x < 800; x += 50) mysdl_draw_line(&app, x, 0, x, 600,  SWEETIE_16_PALETTE[0x01]);
+        for (int y = 0; y < 600; y += 50) mysdl_draw_line(&app, 0, y, 800, y,  SWEETIE_16_PALETTE[0x01]);
 
         Uint8 rect_g = hovering_rect ? 200 : 100;
         if (hovering_rect && mouse_clicked) rect_g = 255;
-        mysdl_fill_rect(&app, 50, 50, 100, 50, (50 << 24) | (150 << 16) | (rect_g << 8) | 25);
-        mysdl_draw_rect(&app, 50, 50, 100, 50, SWEETIE_16_PALETTE[0x0C]);
+        // 0xAABBGGRR format: Alpha=50, Blue=150, Green=rect_g, Red=25
+        mysdl_fill_rect(&app, 100, 100, 200, 100, (50 << 24) | (150 << 16) | (rect_g << 8) | 25);
+        mysdl_draw_rect(&app, 100, 100, 200, 100, SWEETIE_16_PALETTE[0x0C]);
 
         Uint8 circ_b = hovering_circle ? 255 : 150;
         if (hovering_circle && mouse_clicked) circ_b = 255;
+        // 0xAABBGGRR format: Alpha=200, Blue=circ_b, Green=50, Red=255
         mysdl_fill_circle(&app, custom_circle_x, custom_circle_y, custom_circle_r, (200 << 24) | (circ_b << 16) | (50 << 8) | 255);
         mysdl_draw_circle(&app, custom_circle_x, custom_circle_y, custom_circle_r,  SWEETIE_16_PALETTE[0x0C]);
 
         Uint8 player_r = action ? 255 : 0;
         Uint8 player_b = action ? 0 : 255;
-        mysdl_fill_rect(&app, (int)player_x, (int)player_y, 15, 15, (255 << 24) | (player_b << 16) | (200 << 8) | player_r);
-        mysdl_draw_rect(&app, (int)player_x, (int)player_y, 15, 15,  SWEETIE_16_PALETTE[0x0C]);
+        // 0xAABBGGRR format: Alpha=255, Blue=player_b, Green=200, Red=player_r
+        mysdl_fill_rect(&app, (int)player_x, (int)player_y, 30, 30, (255 << 24) | (player_b << 16) | (200 << 8) | player_r);
+        mysdl_draw_rect(&app, (int)player_x, (int)player_y, 30, 30,  SWEETIE_16_PALETTE[0x0C]);
 
         if (xDir != 0 || yDir != 0) {
             (void)joystickAngle;
